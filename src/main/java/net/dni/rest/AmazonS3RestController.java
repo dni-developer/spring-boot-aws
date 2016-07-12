@@ -1,9 +1,10 @@
-package net.dni;
+package net.dni.rest;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.util.IOUtils;
+import net.dni.Loggable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,8 +15,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 @RestController
-@RequestMapping("/s3")
-public class AmazonS3Controller {
+@RequestMapping("/rest")
+public class AmazonS3RestController {
 
     @Autowired
     AmazonS3 amazonS3;
@@ -27,7 +28,6 @@ public class AmazonS3Controller {
     private Logger logger;
 
     @RequestMapping(value = "/list", method = RequestMethod.GET, produces = "application/json")
-    @ResponseBody
     public ObjectListing list() {
         return amazonS3.listObjects(bucketName);
     }
@@ -39,7 +39,6 @@ public class AmazonS3Controller {
     }
 
     @RequestMapping(value = "/download/{key}/", method = RequestMethod.GET)
-    @ResponseBody
     public void download(@PathVariable("key") String key, HttpServletResponse response) throws IOException {
         logger.info("key: {}", key);
         S3Object object = amazonS3.getObject(bucketName, key);
@@ -51,5 +50,4 @@ public class AmazonS3Controller {
         IOUtils.copy(stream, response.getOutputStream());
         response.flushBuffer();
     }
-
 }
