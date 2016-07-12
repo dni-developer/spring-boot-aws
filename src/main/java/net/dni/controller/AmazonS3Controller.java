@@ -5,7 +5,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.util.IOUtils;
 import net.dni.Loggable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,16 +44,18 @@ public class AmazonS3Controller {
 
     @RequestMapping(method = RequestMethod.POST, value = "/")
     public String handleFileUpload(@RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) {
+        logger.info("fileupload:{}, size:{}", file.getOriginalFilename(), file.getSize());
+
         if (!file.isEmpty()) {
             try {
                 ObjectMetadata metadata = new ObjectMetadata();
-                metadata.setContentLength(IOUtils.toByteArray(file.getInputStream()).length);
+                metadata.setContentLength(file.getSize());
                 metadata.setContentType(file.getContentType());
-
                 PutObjectRequest request = new PutObjectRequest(bucketName, file.getOriginalFilename(), file.getInputStream(), metadata);
                 amazonS3.putObject(request);
                 redirectAttributes.addFlashAttribute("message", "You successfully uploaded " + file.getOriginalFilename() + "!");
             } catch (IOException | RuntimeException e) {
+                logger.error("", e);
                 redirectAttributes.addFlashAttribute("message", "Failued to upload " + file.getOriginalFilename() + " => " + e.getMessage());
             }
         } else {
