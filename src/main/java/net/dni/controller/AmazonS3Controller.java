@@ -49,8 +49,9 @@ public class AmazonS3Controller {
             try {
                 ObjectMetadata metadata = new ObjectMetadata();
                 metadata.setContentLength(IOUtils.toByteArray(file.getInputStream()).length);
+                metadata.setContentType(file.getContentType());
 
-                PutObjectRequest request = new PutObjectRequest(bucketName, file.getName(), file.getInputStream(), metadata);
+                PutObjectRequest request = new PutObjectRequest(bucketName, file.getOriginalFilename(), file.getInputStream(), metadata);
                 amazonS3.putObject(request);
                 redirectAttributes.addFlashAttribute("message", "You successfully uploaded " + file.getOriginalFilename() + "!");
             } catch (IOException | RuntimeException e) {
