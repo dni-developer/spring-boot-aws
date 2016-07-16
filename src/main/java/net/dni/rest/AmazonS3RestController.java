@@ -1,11 +1,9 @@
 package net.dni.rest;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.util.IOUtils;
 import net.dni.Loggable;
 import org.slf4j.Logger;
@@ -19,6 +17,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/rest")
@@ -50,7 +50,7 @@ public class AmazonS3RestController {
      * @return
      */
     @RequestMapping(value = "/metadata/{key}/", method = RequestMethod.GET, produces = "application/json")
-    public S3Object metadata(@PathVariable("key") String key) {
+    public S3Object getObjectMetadata(@PathVariable("key") String key) {
         logger.info("key: {}", key);
         return amazonS3.getObject(bucketName, key);
     }
@@ -69,7 +69,7 @@ public class AmazonS3RestController {
     /**
      * Read object content as String in default bucket
      *
-     * @param key
+     * @param key filename
      * @return
      * @throws IOException
      */
@@ -84,6 +84,26 @@ public class AmazonS3RestController {
             content.append(line);
         }
         return content.toString();
+    }
+
+    /**
+     * Return a pre-signed url to download the object from AWS
+     * @param key
+     * @return
+     */
+    @RequestMapping(value = "/download-url/{key}", method = RequestMethod.GET)
+    public URL getPreSignedDownloadUrl(@PathVariable("key") String key) {
+
+        Date expiration = new Date();
+        long msec = expiration.getTime();
+        msec += 1000 * 60; // 1 min.
+        expiration.setTime(msec);
+
+        GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName, key);
+        generatePresignedUrlRequest.setMethod(HttpMethod.GET); // Default.
+        generatePresignedUrlRequest.setExpiration(expiration);
+
+        return amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
     }
 
     /**
@@ -108,7 +128,8 @@ public class AmazonS3RestController {
 
     /**
      * Stream upload multipart files to default bucket
-     * add User metadata
+     * add User getObjectMetadata
+     *
      * @param files
      * @throws IOException
      */
@@ -124,8 +145,8 @@ public class AmazonS3RestController {
                     metadata.addUserMetadata("user", "dni");
                     PutObjectRequest request = new PutObjectRequest(bucketName, file.getOriginalFilename(), file.getInputStream(), metadata);
                     amazonS3.putObject(request);
-                } catch (AmazonServiceException e){
-                    logger.error("",e);
+                } catch (AmazonServiceException e) {
+                    logger.error("", e);
                 }
             }
         }
